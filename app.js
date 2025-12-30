@@ -47,6 +47,9 @@
     lockedPosition: false,
   };
 
+  const MIN_SCALE = 0.2;
+  const MAX_SCALE = 3.0;
+
   const filterState = {
     brightness: 1,
     contrast: 1,
@@ -504,7 +507,7 @@
       const dist = Math.hypot(dx, dy) || 1;
 
       let newScale = (dist / pinchStartDistance) * pinchStartScale;
-      newScale = Math.max(0.5, Math.min(3, newScale));
+      newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
 
       const centerX = (t0.clientX + t1.clientX) / 2;
       const centerY = (t0.clientY + t1.clientY) / 2;
@@ -555,14 +558,14 @@
       if (!overlayReady || overlayState.lockedSize) return;
       const factor = 1.1;
       const newScale = overlayState.scale * factor;
-      overlayState.scale = Math.min(3, newScale);
+      overlayState.scale = Math.min(MAX_SCALE, newScale);
     });
 
     zoomOutBtn.addEventListener('click', () => {
       if (!overlayReady || overlayState.lockedSize) return;
       const factor = 1 / 1.1;
       const newScale = overlayState.scale * factor;
-      overlayState.scale = Math.max(0.5, newScale);
+      overlayState.scale = Math.max(MIN_SCALE, newScale);
     });
 
     lockSizeBtn.addEventListener('click', toggleLockSize);
