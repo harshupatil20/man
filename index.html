@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AR Tracer</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+
+    <!-- PWA manifest & theme color -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#050509" />
+
+    <!-- iOS PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="AR Tracer" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <!-- Initial state: landing -->
+  <body class="landing" data-theme="dark">
+    <div id="app" class="app-root">
+      <!-- Camera + overlay (Drawing Mode only) -->
+      <div id="cameraContainer" class="camera-container" hidden>
+        <video
+          id="cam"
+          class="camera-video"
+          autoplay
+          playsinline
+          muted
+        ></video>
+        <canvas id="overlay" class="overlay-canvas"></canvas>
+      </div>
+
+      <!-- Landing / Start Camera overlay -->
+      <div id="landingScreen" class="landing-screen">
+        <div class="landing-content">
+          <h1 class="landing-title">AR Tracer</h1>
+          <p id="landingSubtitle" class="landing-subtitle">
+            Step 1: Upload a reference image to begin tracing.
+          </p>
+          <!-- Hidden native file input + visible button -->
+          <input
+            id="fileInput"
+            class="file-input"
+            type="file"
+            accept="image/*"
+            hidden
+          />
+          <button id="landingPrimaryBtn" class="btn primary-btn">
+            Upload Image
+          </button>
+        </div>
+      </div>
+
+      <!-- Minimal bottom controls (Drawing Mode only) -->
+      <div id="controls" class="controls-panel" hidden>
+        <div class="controls-row top-row">
+          <div class="controls-row left-group">
+            <!-- Zoom buttons -->
+            <button id="zoomOutBtn" class="btn icon-btn" aria-label="Zoom out">−</button>
+            <button id="zoomInBtn" class="btn icon-btn" aria-label="Zoom in">+</button>
+            <!-- Lock toggle -->
+            <button id="lockBtn" class="btn" aria-pressed="false">Lock</button>
+          </div>
+          <div class="controls-row right-group">
+            <button id="resetBtn" class="btn" aria-label="Reset image transform">
+              Reset
+            </button>
+            <button id="changeImageBtn" class="btn" aria-label="Change image">
+              Change Image
+            </button>
+            <button id="hideUiBtn" class="btn" aria-label="Hide UI">
+              Hide UI
+            </button>
+          </div>
+        </div>
+
+        <div class="controls-row sliders-row">
+          <label>
+            Brightness
+            <input
+              id="brightnessSlider"
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.01"
+              value="1"
+            />
+          </label>
+          <label>
+            Contrast
+            <input
+              id="contrastSlider"
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.01"
+              value="1"
+            />
+          </label>
+          <label>
+            Opacity
+            <input
+              id="opacitySlider"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.7"
+            />
+          </label>
+        </div>
+      </div>
+
+      <!-- Tiny hint when UI is hidden (optional, can be removed) -->
+      <div id="uiHint" class="ui-hint" hidden>
+        Tap to show controls
+      </div>
+
+      <!-- Toast / status messages -->
+      <div id="message" class="message"></div>
+
+      <!-- PWA install hint -->
+      <div id="installHint" class="install-hint" hidden>
+        <span>Tip: Use <strong>Share → Add to Home Screen</strong> for a better drawing experience.</span>
+        <button id="dismissInstallHint" class="hint-close-btn" aria-label="Dismiss">×</button>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
