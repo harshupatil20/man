@@ -15,7 +15,8 @@
   const controls = document.getElementById('controls');
   const zoomInBtn = document.getElementById('zoomInBtn');
   const zoomOutBtn = document.getElementById('zoomOutBtn');
-  const lockBtn = document.getElementById('lockBtn');
+  const lockSizeBtn = document.getElementById('lockSizeBtn');
+  const lockPosBtn = document.getElementById('lockPosBtn');
   const resetBtn = document.getElementById('resetBtn');
   const changeImageBtn = document.getElementById('changeImageBtn');
   const hideUiBtn = document.getElementById('hideUiBtn');
@@ -42,7 +43,8 @@
     x: 0,
     y: 0,
     rotation: 0, // kept at 0 for now (no rotation support)
-    locked: false,
+    lockedSize: false,
+    lockedPosition: false,
   };
 
   const filterState = {
@@ -74,6 +76,7 @@
   let panStartY = 0;
   let overlayStartX = 0;
   let overlayStartY = 0;
+  let isPanning = false;
 
   let pinchStartDistance = 0;
   let pinchStartScale = 1;
@@ -81,6 +84,7 @@
   let pinchStartCenterY = 0;
   let overlayStartXForPinch = 0;
   let overlayStartYForPinch = 0;
+  let isPinching = false;
 
   // --- Utility ---
 
@@ -266,7 +270,9 @@
     overlayReady = false;
     appState.hasImage = false;
     appState.uiHidden = false;
-    overlayState.locked = false;
+    overlayState.lockedSize = false;
+    overlayState.lockedPosition = false;
+    syncLockUi();
 
     document.body.classList.remove('controls-hidden');
     setBodyState('landing');
@@ -298,11 +304,25 @@
     uiHint.hidden = true;
   }
 
-  function toggleLock() {
-    overlayState.locked = !overlayState.locked;
-    lockBtn.setAttribute('aria-pressed', String(overlayState.locked));
-    lockBtn.textContent = overlayState.locked ? 'Locked' : 'Lock';
-    showMessage(overlayState.locked ? 'Overlay locked' : 'Overlay unlocked');
+  function syncLockUi() {
+    if (!lockSizeBtn || !lockPosBtn) return;
+    lockSizeBtn.setAttribute('aria-pressed', String(overlayState.lockedSize));
+    lockSizeBtn.textContent = overlayState.lockedSize ? 'Size Locked' : 'Lock Size';
+    lockPosBtn.setAttribute('aria-pressed', String(overlayState.lockedPosition));
+    lockPosBtn.textContent = overlayState.lockedPosition ? 'Pos Locked' : 'Lock Position';
+  }
+
+  function toggleLockSize() {
+    overlayState.lockedSize = !overlayState.lockedSize;
+    syncLockUi();
+    showMessage(overlayState.lockedSize ? 'Size locked' : 'Size unlocked');
+    vibrateShort();
+  }
+
+  function toggleLockPosition() {
+    overlayState.lockedPosition = !overlayState.lockedPosition;
+    syncLockUi();
+    showMessage(overlayState.lockedPosition ? 'Position locked' : 'Position unlocked');
     vibrateShort();
   }
 
@@ -422,14 +442,21 @@
         lastTapY = y;
       }
 
-      if (overlayState.locked) return;
+      if (overlayState.lockedPosition) return;
 
+      // Begin a pan gesture (single-finger drag)
+      isPinching = false;
+      isPanning = true;
       panStartX = x;
       panStartY = y;
       overlayStartX = overlayState.x;
       overlayStartY = overlayState.y;
     } else if (touches.length === 2) {
-      if (overlayState.locked) return;
+      if (overlayState.lockedSize) return;
+
+      // Begin a pinch-zoom gesture (two-finger)
+      isPanning = false;
+      isPinching = true;
 
       const t0 = touches[0];
       const t1 = touches[1];
@@ -448,10 +475,13 @@
   }
 
   function handleTouchMove(e) {
-    if (!overlayReady || overlayState.locked) return;
+    if (!overlayReady) return;
 
     const touches = e.touches;
-    if (touches.length === 1) {
+
+    // Single-finger drag = pan (only when not in pinch mode)
+    if (touches.length === 1 && isPanning) {
+      if (overlayState.lockedPosition) return;
       const t = touches[0];
       const x = t.clientX;
       const y = t.clientY;
@@ -461,7 +491,12 @@
       overlayState.x = overlayStartX + dx;
       overlayState.y = overlayStartY + dy;
       e.preventDefault();
-    } else if (touches.length === 2) {
+    } else if (touches.length === 2 && isPinching) {
+      if (overlayState.lockedSize) {
+        e.preventDefault();
+        return;
+      }
+
       const t0 = touches[0];
       const t1 = touches[1];
       const dx = t1.clientX - t0.clientX;
@@ -469,7 +504,7 @@
       const dist = Math.hypot(dx, dy) || 1;
 
       let newScale = (dist / pinchStartDistance) * pinchStartScale;
-      newScale = Math.max(0.1, Math.min(8, newScale));
+      newScale = Math.max(0.5, Math.min(3, newScale));
 
       const centerX = (t0.clientX + t1.clientX) / 2;
       const centerY = (t0.clientY + t1.clientY) / 2;
@@ -488,6 +523,9 @@
 
   function handleTouchEnd(e) {
     if (e.touches.length === 0) {
+      // Gesture ended; clear gesture mode flags
+      isPanning = false;
+      isPinching = false;
       pinchStartDistance = 0;
     }
   }
@@ -514,20 +552,21 @@
     });
 
     zoomInBtn.addEventListener('click', () => {
-      if (!overlayReady || overlayState.locked) return;
+      if (!overlayReady || overlayState.lockedSize) return;
       const factor = 1.1;
       const newScale = overlayState.scale * factor;
-      overlayState.scale = Math.min(8, newScale);
+      overlayState.scale = Math.min(3, newScale);
     });
 
     zoomOutBtn.addEventListener('click', () => {
-      if (!overlayReady || overlayState.locked) return;
+      if (!overlayReady || overlayState.lockedSize) return;
       const factor = 1 / 1.1;
       const newScale = overlayState.scale * factor;
-      overlayState.scale = Math.max(0.1, newScale);
+      overlayState.scale = Math.max(0.5, newScale);
     });
 
-    lockBtn.addEventListener('click', toggleLock);
+    lockSizeBtn.addEventListener('click', toggleLockSize);
+    lockPosBtn.addEventListener('click', toggleLockPosition);
 
     resetBtn.addEventListener('click', () => {
       resetOverlayTransform();
@@ -628,6 +667,7 @@
   window.addEventListener('load', () => {
     enterLandingMode();
     initControls();
+    syncLockUi();
     initInstallHint();
     initServiceWorker();
     startRenderLoop();
